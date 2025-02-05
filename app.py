@@ -8,6 +8,17 @@ load_dotenv()
 # Access the OpenAI API key from the environment variable
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=openai_api_key)
+# Check if the API key is available
+if not openai_api_key:
+    # If the key is not found, prompt the user to input the API key manually
+    openai_api_key = st.text_input("Enter your OpenAI API Key", type="password")
+    if not openai_api_key:
+        st.warning("Please provide your OpenAI API key to proceed.")
+    else:
+        # Set the API key to OpenAI
+        client = openai.OpenAI(api_key=openai_api_key)
+        st.success("API key successfully set!")
+
 model="gpt-4o-mini"
 # Streamlit UI
 st.subheader("Generate AI-driven prompts and responses with a hallucination score!")
