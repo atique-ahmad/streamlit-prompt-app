@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # Access the OpenAI API key from the environment variable
 openai_api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=openai_api_key)
+# client = openai.OpenAI(api_key=openai_api_key)
 # Check if the API key is available
 if not openai_api_key:
     # If the key is not found, prompt the user to input the API key manually
