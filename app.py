@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # Access the OpenAI API key from the environment variable
 openai_api_key = os.getenv("OPENAI_API_KEY")
-# client = openai.OpenAI(api_key=openai_api_key)
+model="gpt-4o-mini"
 # Check if the API key is available
 if not openai_api_key:
     # If the key is not found, prompt the user to input the API key manually
@@ -18,8 +18,10 @@ if not openai_api_key:
         # Set the API key to OpenAI
         client = openai.OpenAI(api_key=openai_api_key)
         st.success("API key successfully set!")
+else:
+    client = openai.OpenAI(api_key=openai_api_key)
 
-model="gpt-4o-mini"
+
 # Streamlit UI
 st.subheader("Generate AI-driven prompts and responses with a hallucination score!")
 
@@ -42,7 +44,7 @@ def generate_n_prompts(context, prompt_type, n):
     Generates 'n' prompts based on the given context and prompt type.
     """
     system_prompt = (
-        "[Instructions] Generate well-structured prompts based on the given text. "
+        "[Instructions] Generate well-structured prompts based on the given text. You are an advanced AI system designed to generate high-quality, enterprise-grade prompts. These prompts will be used by our clients within an enterprise chat application to ensure accurate, context-aware, and effective interactions"
         "Avoid starting every question with 'What' or 'How', except for informational prompts where it is allowed. "
         "Ensure variety and clarity in the generated prompts.\n\n"
         "[Examples]\n"
