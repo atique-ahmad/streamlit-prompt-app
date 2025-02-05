@@ -36,7 +36,7 @@ else:
 # User Inputs
 prompt_type = st.selectbox("Select Prompt Type", ["Analytical", "Descriptive", "Problem-Solving", "Opinion-Based", "Informational"])
 num_prompts = st.slider("Number of Prompts", 1, 50, 10)
-hallucination_score = st.slider("Hallucination Score (%)", 1, 100, 10)
+hallucination_score = st.slider("Hallucination Score (%)", 0, 100, 10)
 
 # Function to generate prompts
 def generate_n_prompts(context, prompt_type, n):
