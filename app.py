@@ -1,4 +1,5 @@
 import streamlit as st
+import tiktoken
 import openai
 import json
 import os
@@ -33,6 +34,17 @@ if uploaded_file:
 else:
     text_content = st.text_area("Or paste text here:")
 
+# Function to calculate token length
+def get_token_count(text):
+    enc = tiktoken.get_encoding("cl100k_base")
+    tokens = enc.encode(text)
+    return len(tokens)
+
+
+# Display token count for text content
+if text_content.strip():
+    token_count = get_token_count(text_content)
+    st.success(f"Token length of the provided context: {token_count}")
 # User Inputs
 prompt_type = st.selectbox("Select Prompt Type", ["Analytical", "Descriptive", "Problem-Solving", "Opinion-Based", "Informational"])
 num_prompts = st.slider("Number of Prompts", 1, 50, 10)
