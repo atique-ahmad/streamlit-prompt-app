@@ -110,6 +110,22 @@ def generate_response(prompt, context, hallucination_score):
 
     return response_json.get("response", "")
 
+# Process data to remove 'error' and move 'raw_output' to 'response' as JSON
+def clean_json_responses(data):
+    for item in data:
+        if "response" in item and "raw_output" in item["response"]:
+            try:
+                # Parse the raw_output string as JSON
+                raw_output = item["response"]["raw_output"]
+                #  Remove the beginning part
+                cleaned_output = raw_output.split('{ "response": "', 1)[-1]
+                # Remove the ending ' }'
+                cleaned_output = cleaned_output.rsplit('" }', 1)[0]
+                item["response"] = cleaned_output  
+            except Exception as e:
+                print(f"Error processing item: {e}")
+    return data
+
 def save_to_json(data):
     """Saves the responses to a JSON file and provides it for download."""
     json_output = json.dumps(data, indent=4)
@@ -146,9 +162,13 @@ if st.button("Generate Prompts & Responses"):
                     })
 
                 # Save to JSON and CSV
-                st.json(responses_data)
-                save_to_json(responses_data)
-                save_to_csv(responses_data)
+                # st.json(responses_data)
+                cleaned_data = clean_json_responses(responses_data)
+                # Print or save the cleaned JSON
+                st.write("Cleaning JSON ......")
+                st.json(cleaned_data)
+                save_to_json(cleaned_data)
+                save_to_csv(cleaned_data)
         else:
             st.error("Failed to generate valid prompts.")
 
