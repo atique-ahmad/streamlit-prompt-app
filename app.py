@@ -8,10 +8,11 @@ from dotenv import load_dotenv
 load_dotenv()
 # Access the OpenAI API key from the environment variable
 openai_api_key = os.getenv("OPENAI_API_KEY")
-model="gpt-4o-mini"
+# model="gpt-4o-mini"
 
 # Streamlit UI
 st.subheader("Generate AI-driven prompts and responses with a hallucination score from given Context/text-file!")
+model = st.selectbox("Select Model", ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"])
 
 # Check if the API key is available
 if not openai_api_key:
@@ -157,14 +158,13 @@ if st.button("Generate Prompts & Responses"):
     if not text_content.strip():
         st.warning("Please provide text input.")
     else:
-        st.write(" Generates 'n' prompts based on the given context and prompt type.\n Generating prompts...")
+        st.write("Generating 'n' prompts based on the given context and prompt type...")
         prompts = generate_n_prompts(text_content, prompt_type, num_prompts)
         st.json(prompts)
         if "error" not in prompts:
                 responses_data = []
 
-                st.write("Generates a response for the given prompt based on the context while considering hallucination.\nGenerating responses for the prompts...")
-
+                st.write("Generating a responses based on the context while considering hallucination...")
                 for key, prompt in prompts.items():
                     response_text = generate_response(prompt, text_content, hallucination_score)
                     responses_data.append({
@@ -177,7 +177,7 @@ if st.button("Generate Prompts & Responses"):
                 # st.json(responses_data)
                 cleaned_data = clean_json_responses(responses_data)
                 # Print or save the cleaned JSON
-                st.write("Cleaning JSON ......")
+                st.write("Cleaning JSON data...")
                 st.json(cleaned_data)
                 save_to_json(cleaned_data)
                 save_to_csv(cleaned_data)
@@ -185,5 +185,4 @@ if st.button("Generate Prompts & Responses"):
             st.error("Failed to generate valid prompts.")
 
 
-st.write("👨‍💻  Streamlit & OpenAI API")
-
+# st.write("👨‍💻")
