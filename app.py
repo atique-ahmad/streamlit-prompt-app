@@ -12,7 +12,7 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Streamlit UI
 st.subheader("Generate AI-driven prompts and responses with a hallucination score from given Context/text-file!")
-model = st.selectbox("Select Model", ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"])
+model = st.selectbox("Select Model", ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o3-mini"])
 
 # Check if the API key is available
 if not openai_api_key:
