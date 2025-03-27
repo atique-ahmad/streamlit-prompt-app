@@ -12,7 +12,7 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Streamlit UI
 st.subheader("Generate AI-driven prompts and responses with a hallucination score from given Context/text-file!")
-model = st.selectbox("Select Model", ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o3-mini"])
+model = st.selectbox("Select Model", [ "gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o", "o3-mini"])
 
 # Check if the API key is available
 if not openai_api_key:
@@ -51,23 +51,96 @@ prompt_type = st.selectbox("Select Prompt Type", ["Analytical", "Descriptive", "
 num_prompts = st.slider("Number of Prompts", 1, 50, 10)
 hallucination_score = st.slider("Hallucination Score (%)", 0, 100, 10)
 
+
+# Function to calculate hallucination score based on context and response
+def generate_hallucination_score(response, context):
+    system_prompt = (
+        f"Here are the instructions using the formula to calculate the Hallucination score:\n"
+        f"n = Count the total number of statements in the response (a statement is defined as a full stop sentence).\n"
+        f"Number of Incorrect Statements = Identify the number of incorrect statements based on the given context or out-of-context statements. An incorrect statement means it is not relevant to the context, or its meaning is the opposite of the context.\n"
+        f"Formula Hallucination = (Number of Incorrect Statements / n) * 100\n\n"
+        f"[Example]\n"
+        f"{{\n"
+        f"    \"correct_statements\": [\"This is a correct statement.\", \"This is another correct statement.\"],\n"
+        f"    \"incorrect_statements\": [\"Here is an incorrect statement.\", \"Another wrong statement.\"],\n"
+        f"    \"correct\": 2,\n"
+        f"    \"incorrect\": 2,\n"
+        f"    \"total\": 4,\n"
+        f"    \"hallucination\": 50\n"
+        f"}}\n\n"
+        
+        f"[Output Format]\n"
+        f"{{\n"
+        f"    \"correct_statements\": [\"\", \"\", \"\"],\n"
+        f"    \"incorrect_statements\": [\"\", \"\", \"\"],\n"
+        f"    \"correct\": ,\n"
+        f"    \"incorrect\": ,\n"
+        f"    \"total\": ,\n"
+        f"    \"hallucination\": \n"
+        f"}}\n\n"
+        
+        f"Please follow this output format exactly, with no extra context.\n"
+        f"Ensure that both the incorrect_statements and correct_statements are full stop sentences as per the definition of a statement."
+    )
+
+    user_prompt = (
+        f"Context: {context}\n\n"
+        f"Response: {response}\n\n"
+        f"Please verify how many statements in the response are correct and how many are incorrect based on the context.\n"
+        f"Provide your answer in the following format:\n"
+        f"[Output Format]\n"
+        f"{{\n"
+        f"    \"incorrect_statements\": [\"\", \"\", \"\"],\n"
+        f"    \"correct_statements\": [\"\", \"\", \"\"],\n"
+        f"    \"incorrect\": ,\n"
+        f"    \"correct\": ,\n"
+        f"    \"total\": ,\n"
+        f"    \"hallucination\": \n"
+        f"}}\n\n"
+        f"Please follow the output format exactly, with no extra context."
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+        )
+
+        response_text = response.choices[0].message.content
+        response_json = json.loads(response_text)
+        return response_json
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
 # Function to generate prompts
 def generate_n_prompts(context, prompt_type, n):
     """
     Generates 'n' prompts based on the given context and prompt type.
     """
     system_prompt = (
-        "[Instructions] Generate well-structured prompts based on the given text. You are an advanced AI system designed to generate high-quality, enterprise-grade prompts. These prompts will be used by our clients within an enterprise chat application to ensure accurate, context-aware, and effective interactions"
-        "Avoid starting every question with 'What' or 'How', except for informational prompts where it is allowed. "
-        "Ensure variety and clarity in the generated prompts.\n\n"
+        "[Instructions] Generate a mix of simple and well-structured prompts based on the provided text. "
+        "You are an advanced AI system designed to create high-quality, enterprise-grade prompts. "
+        "These prompts will be used within an enterprise chat application to enhance context-aware and effective interactions.\n\n"
+        
+        "Ensure variety in complexity—some prompts should be simple and direct."
+        "Avoid overusing 'What' or 'How' at the beginning unless necessary for clarity. "
+        "Keep prompts concise, engaging, and relevant.\n\n"
+        f"Ensure they are relevant, well-structured, and match the specified type ('{prompt_type}'). "
+
         "[Examples]\n"
-        "{ \"prompt_1\": \"Analyze the impact of economic policies on inflation trends.\",\n"
-        "  \"prompt_2\": \"Compare the differences between classical and quantum computing approaches.\" }\n\n"
+        "{ \"prompt_1\": \"Explain the role of oxygen in respiration.\",\n"
+        "  \"prompt_2\": \"Analyze the impact of economic policies on inflation trends.\",\n"
+        "  \"prompt_3\": \"Describe the key differences between classical and quantum computing.\" }\n\n"
+        
         "[OutputFormat]\n"
-        "{ \"prompt_1\": \"\", \"prompt_2\": \"\", ... }"
+        "{ \"prompt_1\": \"\", \"prompt_2\": \"\", \"prompt_3\": \"\", ... }"
     )
 
-    user_prompt = f"{context}, Generate {n} prompts of type {prompt_type} while following the provided instructions and examples."
+    user_prompt = f"Based on the given context: '{context}', generate {n} prompts of type '{prompt_type}', ""ensuring adherence to the provided instructions and examples."
 
     try:
         response = client.chat.completions.create(
@@ -87,23 +160,38 @@ def generate_n_prompts(context, prompt_type, n):
 
     return prompts_dict
 
-
 # Function to generate responses with hallucination score
 def generate_response(prompt, context, hallucination_score):
     """
     Generates a response for the given prompt based on the context while considering hallucination.
     """
     system_prompt = (
-        f"[Instructions] Generate a response based on the given context. "
-        f"The response should align with the provided text and must have a hallucination level of {hallucination_score}%. "
-        "If the hallucination level is high, introduce some fabricated details while keeping the response coherent.\n\n"
+        f"[Instructions] Generate a concise, contextually accurate, and coherent response based on the provided context. "
+        f"Ensure that the hallucination score does not exceed {hallucination_score}%. "
+        "This means the proportion of incorrect or out-of-context statements should remain within the specified limit.\n\n"
+        
+        "Hallucination Score Calculation:\n"
+        "- A score of **0%** means all statements are correct and fully based on the given context.\n"
+        "- A score of **50%** means that half of the statements in the response are incorrect or out of context.\n"
+        "- A score of **100%** means every statement in the response is incorrect or unrelated to the context.\n\n"
+        
+        "If necessary, minor details can be added to maintain logical flow, but they must be relevant and factually accurate.\n\n"
+        
         "[Example]\n"
-        "{ \"response\": \"Based on the context, X is true. However, some sources claim Y, which may not be fully supported by the provided text.\" }\n\n"
-        "[OutputFormat]\n"
+        "{ \"response\": \"X is true based on the context. Some suggest Y, but it is not fully supported.\" }\n\n"
+        
+        "[Output Format]\n"
         "{ \"response\": \"\" }"
     )
 
-    user_prompt = f"Context: {context}\n\nGenerate a response for the following prompt:\n{prompt}"
+    user_prompt = (
+        f"Context: {context}\n\n"
+        "Generate a concise and accurate response for:\n"
+        f"{prompt}\n\n"
+        f"Ensure the response strictly adheres to the given context while maintaining factual accuracy. "
+        f"The hallucination score must not exceed {hallucination_score}%, meaning the proportion of incorrect statements should remain within this limit."
+    )
+
 
     try:
         response = client.chat.completions.create(
@@ -145,6 +233,11 @@ def save_to_json(data):
     st.download_button("Download JSON", json_output, "generated_responses.json", "application/json")
     st.write("Responses saved to generated_responses.json")
 
+def saveprocessed_data_json(data):
+    json_output = json.dumps(data, indent=4)
+    st.download_button("Download JSON", json_output, "processed_data_generated.json", "application/json")
+    st.write("Responses saved to processed_data_generated.json")
+
 def save_to_csv(data):
     """Saves the responses to a CSV file and provides it for download."""
     csv_output = "Prompt,Response,Hallucination Score\n"
@@ -152,6 +245,11 @@ def save_to_csv(data):
         csv_output += f'"{row["prompt"]}","{row["response"]}",{row["hallucination_score"]}\n'
     st.download_button("Download CSV", csv_output, "generated_responses.csv", "text/csv")
     st.write("Responses saved to generated_responses.csv")
+    # csv_output = "Prompt\n"
+    # for row in data:
+    #     csv_output += f'"{row["prompt"]}"\n'
+    # st.download_button("Download CSV", csv_output, "generated_prompts.csv", "text/csv")
+    # st.write("Responses saved to generated_prompts.csv")
     
 # Generate prompts & responses on button click
 if st.button("Generate Prompts & Responses"):
@@ -174,15 +272,41 @@ if st.button("Generate Prompts & Responses"):
                     })
 
                 # Save to JSON and CSV
-                # st.json(responses_data)
+                st.json(responses_data)
                 cleaned_data = clean_json_responses(responses_data)
-                # Print or save the cleaned JSON
-                st.write("Cleaning JSON data...")
-                st.json(cleaned_data)
-                save_to_json(cleaned_data)
-                save_to_csv(cleaned_data)
+                save_to_csv(responses_data) # just prompt save here
+                # st.write("Cleaning JSON data...")
+                # st.json(cleaned_data)
+                # save_to_json(cleaned_data)
+                # save_to_csv(cleaned_data)
+                # # calculate hallucination score based on context and response
+                # st.write("Calculate hallucination score based on context and response...")
+                # processed_data = []
+                # for entry in cleaned_data:
+                #     prompt = entry['prompt']
+                #     response = entry['response']
+                #     hallucination_data = generate_hallucination_score(response, text_content)
+                #     if hallucination_data:
+                #         processed_data.append({
+                #             "prompt": prompt,
+                #             "response": response,
+                #             "context": text_content,
+                #             "correct_statements": hallucination_data["correct_statements"],
+                #             "incorrect_statements": hallucination_data["incorrect_statements"],
+                #             "correct": hallucination_data["correct"],
+                #             "incorrect": hallucination_data["incorrect"],
+                #             "total": hallucination_data["total"],
+                #             "hallucination": hallucination_data["hallucination"]
+                #         })
+                #     else:
+                #         print(f"Error processing prompt: {prompt}")
+
+                # st.json(processed_data)
+                # saveprocessed_data_json(processed_data)
+               
         else:
             st.error("Failed to generate valid prompts.")
 
 
-# st.write("👨‍💻")
+# st.write("Streamlit & OpenAI API")
+
